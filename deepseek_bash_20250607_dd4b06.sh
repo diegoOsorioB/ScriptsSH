@@ -19,13 +19,27 @@ sudo ln -sf /usr/local/ssl/lib/libcrypto.so.1.1 /usr/lib/libcrypto.so.1.1
 echo "/usr/local/ssl/lib" | sudo tee /etc/ld.so.conf.d/openssl-1.1.conf
 sudo ldconfig
 
-echo "===> Instalando RVM y Ruby..."
+echo "===> Instalando RVM..."
 gpg --keyserver hkp://keyserver.ubuntu.com --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 7D2BAF1CF37B13E2069D6956105BD0E739499BDB
 \curl -sSL https://get.rvm.io | bash -s stable
+
+# Cargar RVM
 source ~/.rvm/scripts/rvm
 
-echo "===> Instalando Ruby 2.6.10 con OpenSSL 1.1..."
-rvm install 2.6.10 --with-openssl-dir=/usr/local/ssl
+# Comprobar si RVM se cargó bien
+if ! command -v rvm &>/dev/null; then
+    echo "❌ RVM no está disponible. Revisa la instalación."
+    exit 1
+fi
+
+echo "===> Verificando Ruby 2.6.10..."
+if ! rvm list | grep -q "ruby-2.6.10"; then
+    echo "===> Instalando Ruby 2.6.10..."
+    rvm install 2.6.10 --with-openssl-dir=/usr/local/ssl
+else
+    echo "Ruby 2.6.10 ya está instalado."
+fi
+
 rvm use 2.6.10 --default
 
 echo "===> Instalando Bundler y Rails..."
@@ -34,14 +48,24 @@ gem install rails -v 5.2.4
 
 echo "===> Clonando repositorio de Fedena..."
 cd ~
-git clone https://github.com/projectfedena/fedena.git
+if [ -d "fedena" ]; then
+    echo "⚠️ Ya existe la carpeta ~/fedena. No se volverá a clonar."
+else
+    git clone https://github.com/projectfedena/fedena.git
+fi
 cd fedena
+
+echo "===> Verificando disponibilidad de bundle..."
+if ! command -v bundle &>/dev/null; then
+    echo "❌ El comando 'bundle' no está disponible. Asegúrate de que Ruby y Bundler estén bien instalados."
+    exit 1
+fi
 
 echo "===> Instalando dependencias Ruby..."
 bundle install
 
 echo "===> Configurando base de datos..."
-cp config/database.yml.example config/database.yml
+cp -n config/database.yml.example config/database.yml
 
 echo "⚠️ Abre config/database.yml y edita con tus credenciales:"
 echo "   username: fedena_user"
